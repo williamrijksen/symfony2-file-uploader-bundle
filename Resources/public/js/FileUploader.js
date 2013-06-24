@@ -77,23 +77,19 @@ function PunkAveFileUploader(options)
       }
     },
     start: function (e) {
-      $el.find('[data-spinner="1"]').show();
+      $('#progress').removeClass('hide');
       self.uploading = true;
     },
     stop: function (e) {
-      $el.find('[data-spinner="1"]').hide();
+      $('#progress').addClass('hide');
       self.uploading = false;
     },
     progressall: function (e, data) {
         var progress = parseInt(data.loaded / data.total * 100, 10);
-        $('#progress').removeClass('hide');
         $('#progress .bar').css(
             'width',
             progress + '%'
         );
-        if(progress > 100) {
-            $('#progress').addClass('hide');
-        }
     }
   });
 
