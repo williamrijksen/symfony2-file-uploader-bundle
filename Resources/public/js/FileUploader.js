@@ -83,6 +83,17 @@ function PunkAveFileUploader(options)
     stop: function (e) {
       $el.find('[data-spinner="1"]').hide();
       self.uploading = false;
+    },
+    progressall: function (e, data) {
+        var progress = parseInt(data.loaded / data.total * 100, 10);
+        $('#progress').removeClass('hide');
+        $('#progress .bar').css(
+            'width',
+            progress + '%'
+        );
+        if(progress > 100) {
+            $('#progress').addClass('hide');
+        }
     }
   });
 
