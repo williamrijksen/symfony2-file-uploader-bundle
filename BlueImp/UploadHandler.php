@@ -61,7 +61,12 @@ class UploadHandler
                     'max_width' => 80,
                     'max_height' => 80
                 )
-            )
+            ),
+            'ps_file_extensions' => array(
+                'ai',
+                'psd',
+                'pdf',
+                'eps')
         );
         if ($options) {
             $this->options = array_replace_recursive($this->options, $options);
@@ -116,6 +121,24 @@ class UploadHandler
     protected function create_scaled_image($file_name, $options) {
         $file_path = $this->options['upload_dir'].$file_name;
         $new_file_path = $options['upload_dir'].$file_name;
+        
+        if (extension_loaded('imagick')) {
+            // Special Postscript case
+            if($this->is_ps_file($file_name)) {
+                try {
+                    $im = new \Imagick($file_path);
+                    $im->flattenImages();
+                    $im->setImageFormat('png');
+                    $file_name .= '.png';
+                    $file_path .= '.png';
+                    $new_file_path .= '.png';
+                    $im->writeImage($file_path);
+                } catch (\ImagickException $e) {
+                    return false;                  
+                }
+            }
+        }
+        
         list($img_width, $img_height) = @getimagesize($file_path);
         if (!$img_width || !$img_height) {
             return false;
@@ -292,7 +315,7 @@ class UploadHandler
       	return $success;
     }
 
-    protected function handle_file_upload($uploaded_file, $name, $size, $type, $error, $index) {
+    protected function handle_file_upload($uploaded_file, $name, $size, $type, $error, $index=0) {
         $file = new \stdClass();
         $file->name = $this->trim_file_name($name, $type, $index);
         $file->size = intval($size);
@@ -330,9 +353,8 @@ class UploadHandler
                 $file->url = $this->options['upload_url'].rawurlencode($file->name);
                 foreach($this->options['image_versions'] as $version => $options) {
                     if ($this->create_scaled_image($file->name, $options)) {
-                        if ($this->options['upload_dir'] !== $options['upload_dir']) {
-                            $file->{$version.'_url'} = $options['upload_url']
-                                .rawurlencode($file->name);
+                        if ($this->options['upload_dir'] !== $options['upload_dir']) {                            
+                            $file->{$version.'_url'} = $this->add_png_to_ps_extension($options['upload_url'].rawurlencode($file->name));
                         } else {
                             clearstatcache();
                             $file_size = filesize($file_path);
@@ -423,9 +445,15 @@ class UploadHandler
             basename(stripslashes($_REQUEST['file'])) : null;
         $file_path = $this->options['upload_dir'].$file_name;
         $success = is_file($file_path) && $file_name[0] !== '.' && unlink($file_path);
+        // If Postcript file, remove original PNG file used to generate thumbnails
+        if($success && $this->is_ps_file($file_name)) {
+            $file_path_ps = $this->add_png_to_ps_extension($file_path);
+            if(is_file($file_path_ps))
+                unlink($file_path_ps);
+        }
         if ($success) {
             foreach($this->options['image_versions'] as $version => $options) {
-                $file = $options['upload_dir'].$file_name;
+                $file = $this->add_png_to_ps_extension($options['upload_dir'].$file_name);
                 if (is_file($file)) {
                     unlink($file);
                 }
@@ -435,4 +463,20 @@ class UploadHandler
         echo json_encode($success);
     }
 
+    public function add_png_to_ps_extension($filename) {
+        $thumbnail_ext = '';
+        // For Postscript files, add png extension
+        if($this->is_ps_file($filename)) {
+            $thumbnail_ext = '.png';
+        }
+        return $filename.$thumbnail_ext;
+    }
+    
+    public function is_ps_file($filename)  {
+        $file_ext = strtolower(substr(strrchr($filename, '.'), 1));
+        if(in_array($file_ext, $this->options['ps_file_extensions']))
+            return true;
+        else
+            return false;
+    }
 }

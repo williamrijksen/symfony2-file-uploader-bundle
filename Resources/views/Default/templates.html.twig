@@ -31,13 +31,12 @@
 <script type="text/template" id="file-uploader-file-template">
     <li data-name="<%- name %>" class="thumbnail">
         {# Some things can be thumbnailed, some things not #}
-        {# ACHTUNG: regular expression literals fail in Underscore templates #}
-        <% if (url.match(new RegExp('(\.gif|\.jpg|\.jpeg|\.png)$', 'i'))) { %>
+        <% if ('undefined' != typeof thumbnail_url) { %>
             <img src="<%- thumbnail_url %>" class="thumbnail-image" />
         <% } %>
         <div class="caption">
             <span class="filename"><%- name %></span>
-            <a rel="tooltip" title="Download Original" class="download thumbnail-action btn=" target="download" href="<%- url %>"><i class="icon-download"></i></a>
+            <a rel="tooltip" title="Download Original" class="download thumbnail-action btn" target="download" href="<%- url %>"><i class="icon-download"></i></a>
             {# ACHTUNG: data-action="delete" matters to javascript #}
             <a rel="tooltip" title="Delete" data-action="delete" class="delete thumbnail-action btn" href="#delete"><i class="icon-trash"></i></a>
         </div>
