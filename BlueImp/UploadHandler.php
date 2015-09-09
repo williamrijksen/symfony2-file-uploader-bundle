@@ -323,6 +323,7 @@ class UploadHandler
         if ($this->validate($uploaded_file, $file, $error, $index)) {
             $this->handle_form_data($file, $index);
             $file_path = $this->options['upload_dir'].$file->name;
+            $file->title = '';
             $append_file = !$this->options['discard_aborted_uploads'] &&
                 is_file($file_path) && $file->size > filesize($file_path);
             clearstatcache();
@@ -367,6 +368,7 @@ class UploadHandler
             }
             $file->size = $file_size;
             $this->set_file_delete_url($file);
+            $_SESSION['image_'.sha1($file_path)] = '';
         }
         return $file;
     }
@@ -386,6 +388,9 @@ class UploadHandler
     public function post() {
         if (isset($_REQUEST['_method']) && $_REQUEST['_method'] === 'DELETE') {
             return $this->delete();
+        }
+        if (isset($_REQUEST['_method']) && $_REQUEST['_method'] === 'PUT') {
+            return $this->edit();
         }
         $upload = isset($_FILES[$this->options['param_name']]) ?
             $_FILES[$this->options['param_name']] : null;
@@ -440,6 +445,16 @@ class UploadHandler
         echo $json;
     }
 
+    public function edit() {
+        $file_name = isset($_REQUEST['file']) ?
+            basename(stripslashes($_REQUEST['file'])) : null;
+        $file_path = $this->options['upload_dir'].$file_name;
+
+        $_SESSION['image'][sha1($file_path)] = $_REQUEST['title'];
+
+        echo json_encode($_SESSION['image'][sha1($file_path)]);
+    }
+
     public function delete() {
         $file_name = isset($_REQUEST['file']) ?
             basename(stripslashes($_REQUEST['file'])) : null;
@@ -459,6 +474,7 @@ class UploadHandler
                 }
             }
         }
+
         header('Content-type: application/json');
         echo json_encode($success);
     }

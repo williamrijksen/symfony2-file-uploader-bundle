@@ -19,10 +19,11 @@ function PunkAveFileUploader(options)
   {
     _.each(files, function(file) {
       appendEditableImage({
-        // cmsMediaUrl is a global variable set by the underscoreTemplates partial of MediaItems.html.twig
-        'thumbnail_url': viewUrl + '/thumbnails/' + file,
-        'url': viewUrl + '/originals/' + file,
-        'name': file
+            // cmsMediaUrl is a global variable set by the underscoreTemplates partial of MediaItems.html.twig
+            'thumbnail_url': viewUrl + '/thumbnails/' + file.name,
+            'url': viewUrl + '/originals/' + file.name,
+            'name': file.name,
+            'title': file.title
         });
     });
   };
@@ -102,27 +103,34 @@ function PunkAveFileUploader(options)
   if (options.chunkalwaysCallback)
     editor.bind('fileuploadchunkalways', options.chunkalwaysCallback);
 
-  editor.fileupload({
-    dataType: 'json',
-    url: uploadUrl,
-    dropZone: $el.find('[data-dropzone="1"]'),
-    done: function (e, data) {
-      if (data)
-      {
-        _.each(data.result, function(item) {
-          appendEditableImage(item);
-        });
-      }
-    },
-    start: function (e) {
-      $el.find('[data-spinner="1"]').show();
-      self.uploading = true;
-    },
-    stop: function (e) {
-      $el.find('[data-spinner="1"]').hide();
-      self.uploading = false;
-    }
-  });
+    editor.fileupload({
+        dataType: 'json',
+        url: uploadUrl,
+        dropZone: $el.find('[data-dropzone="1"]'),
+        done: function (e, data) {
+            if (data)
+            {
+                _.each(data.result, function(item) {
+                    appendEditableImage(item);
+                });
+            }
+        },
+        start: function (e) {
+            $('#progress').removeClass('hide');
+            self.uploading = true;
+        },
+        stop: function (e) {
+            $('#progress').addClass('hide');
+            self.uploading = false;
+        },
+        progressall: function (e, data) {
+            var progress = parseInt(data.loaded / data.total * 100, 10);
+            $('#progress .bar').css(
+                'width',
+                progress + '%'
+            );
+        }
+    });
 
   // Expects thumbnail_url, url, and name properties. thumbnail_url can be undefined if
   // url does not end in gif, jpg, jpeg or png. This is designed to work with the
@@ -134,6 +142,9 @@ function PunkAveFileUploader(options)
       self.errorCallback(info);
       return;
     }
+      if (typeof info.title === "undefined") {
+          info.title = '';
+      }
     var li = $(fileTemplate(info));
     li.find('[data-action="delete"]').click(function(event) {
       var file = $(this).closest('[data-name]');
@@ -143,13 +154,32 @@ function PunkAveFileUploader(options)
         url: setQueryParameter(uploadUrl, 'file', name),
         success: function() {
           file.remove();
+            $(thumbnails).trigger( "count_of_thumbnails_changed" );
         },
         dataType: 'json'
       });
       return false;
     });
 
+      li.find('[data-action="edit"]').click(function(event) {
+          bootbox.prompt("Geef de afbeelding een titel", function(result) {
+              if (result !== null) {
+                  $.ajax({
+                      type: 'post',
+                      url: setQueryParameter(uploadUrl, 'file', name) + '&title=' + result + '&_method=PUT',
+                      success: function(value) {
+                          file.find('span.titleholder').html(value);
+                          $(thumbnails).trigger( "count_of_thumbnails_changed" );
+                      },
+                      dataType: 'json'
+                  });
+              }
+          });
+          var file = $(this).closest('[data-name]');
+          var name = file.attr('data-name');
+      });
     thumbnails.append(li);
+      $(thumbnails).trigger( "count_of_thumbnails_changed" );
   }
 
   function setQueryParameter(url, param, paramVal)

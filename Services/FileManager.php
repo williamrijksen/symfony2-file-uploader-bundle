@@ -27,13 +27,25 @@ class FileManager
             $fullPath = isset($options['full_path']) ? $options['full_path'] : false;
             if ($fullPath)
             {
-                return $dirs;
+                $returnValue = [];
+                foreach ($dirs as $dir) {
+                    array_push($returnValue, [
+                        "path" => $dir,
+                    ]);
+                }
+                return $returnValue;
             }
             if (!is_array($dirs)) {
                 $dirs = array();
             }
-            $result = array_map(function($s) { return preg_replace('|^.+[\\/]|', '', $s); }, $dirs);
-            return $result;
+            $returnValue = [];
+            foreach ($dirs as $item) {
+                array_push($returnValue, [
+                    "name" => preg_replace('|^.+[\\/]|', '', $item),
+                    "title" => (isset($_SESSION['image'][sha1($item)])) ? $_SESSION['image'][sha1($item)] : ''
+                ]);
+            }
+            return $returnValue;
         }
         else
         {
