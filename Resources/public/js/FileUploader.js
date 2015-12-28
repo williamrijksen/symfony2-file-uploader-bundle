@@ -165,8 +165,9 @@ function PunkAveFileUploader(options)
           bootbox.prompt("Geef de afbeelding een titel", function(result) {
               if (result !== null) {
                   $.ajax({
-                      type: 'post',
-                      url: setQueryParameter(uploadUrl, 'file', name) + '&title=' + result + '&_method=PUT',
+                      type: 'POST',
+                      data: 'file=' + name + '&title=' + result + '&_method=PUT',
+                      url: uploadUrl,
                       success: function(value) {
                           file.find('span.titleholder').html(value);
                           $(thumbnails).trigger( "count_of_thumbnails_changed" );
@@ -202,7 +203,7 @@ function PunkAveFileUploader(options)
             }
         }
     }
-    var newTxt = temp + "" + param + "=" + encodeURIComponent(paramVal);
+    var newTxt = temp + "" + param + "=" + paramVal;
     var finalURL = baseURL + "?" + newAdditionalURL + newTxt;
     return finalURL;
   }
